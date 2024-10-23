@@ -30,5 +30,16 @@
 			"quoteStyle": "single",
 			"attributePosition": "auto"
 		}
-	}
+	},
+	"overrides": [
+		{
+			"include": [
+				"src/**/*.ts"
+			],
+			"ignore": [
+				"@Req()",
+				"@Body()"
+			]
+		}
+	]
 }

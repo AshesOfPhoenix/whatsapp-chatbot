@@ -1,13 +1,17 @@
 import { Injectable, Logger } from '@nestjs/common'
-import { generateAiResponse } from 'src/utils/scripts/ai'
+import { generateAiResponse } from '../../utils/scripts/ai'
+// biome-ignore lint/style/useImportType: <explanation>
+import { DatabaseService } from '../database/database.service'
 
 @Injectable()
 export class AiService {
     private readonly logger = new Logger(AiService.name)
 
-    async getAIResponse(message: string): Promise<string> {
-        // Logic to call AI endpoints and get a response
-        const response = await generateAiResponse(message)
+    constructor(private readonly databaseService: DatabaseService) {}
+
+    async getAIResponse(threadId: string): Promise<string> {
+        const messages = await this.databaseService.getThreadMessages(threadId)
+        const response = await generateAiResponse(messages)
         return response
     }
 }

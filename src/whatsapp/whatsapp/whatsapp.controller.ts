@@ -54,11 +54,12 @@ export class WhatsappController {
   async handleIncomingWhatsappMessage(
     @Body() request: WhatsAppWebhookRequest,
   ): Promise<string> {
+    // this.logger.log('Received request', request)
         if (this.whatsappService.isValidWhatsappMessage(request)) {
             await this.whatsappService.readMessage(request)
             await this.whatsappService.processMessage(request)
             return 'ok'
-        }
+        } 
 
     throw new HttpException('Invalid JSON provided', HttpStatus.BAD_REQUEST);
   }

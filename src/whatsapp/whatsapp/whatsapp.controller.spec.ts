@@ -4,6 +4,7 @@ import { WhatsappService } from './whatsapp.service'
 import { AiService } from '../ai/ai.service'
 import { HttpModule } from '@nestjs/axios'
 import { AiModule } from '../ai/ai.module'
+import { DatabaseService } from '../database/database.service'
 
 describe('WhatsappController', () => {
     let controller: WhatsappController
@@ -12,7 +13,7 @@ describe('WhatsappController', () => {
         const module: TestingModule = await Test.createTestingModule({
             imports: [AiModule, HttpModule],
             controllers: [WhatsappController],
-            providers: [WhatsappService, AiService],
+            providers: [WhatsappService, AiService, DatabaseService],
         }).compile()
 
         controller = module.get<WhatsappController>(WhatsappController)

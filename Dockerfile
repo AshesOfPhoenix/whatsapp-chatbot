@@ -12,6 +12,8 @@ COPY . .
 
 RUN pnpm build
 
+RUN pnpm prisma generate --schema=./db/prisma/schema.prisma
+
 EXPOSE 3000
 
 CMD ["pnpm", "start:prod"]

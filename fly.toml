@@ -7,4 +7,4 @@ app = 'whatsapp_bot'
 primary_region = 'fra'
 
 [build]
-  dockerfile = 'bot/Dockerfile'
+  dockerfile = 'Dockerfile'

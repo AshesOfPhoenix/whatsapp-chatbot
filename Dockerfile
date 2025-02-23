@@ -2,9 +2,9 @@ FROM node:20-alpine
 
 WORKDIR /app
 
-RUN apt-get update && apt-get install -y \
+RUN apk update && apk add --no-cache \
     openssl \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/cache/apk/*
 
 COPY package.json pnpm-lock.yaml ./
 

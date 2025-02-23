@@ -8,9 +8,9 @@ RUN npm i -g pnpm
 
 RUN pnpm install
 
-RUN pnpm prisma generate --schema=./db/prisma/schema.prisma
-
 COPY . .
+
+RUN pnpm prisma generate --schema=./db/prisma/schema.prisma
 
 RUN pnpm build
 

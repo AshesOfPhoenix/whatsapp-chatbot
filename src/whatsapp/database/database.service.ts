@@ -1,10 +1,10 @@
 // biome-ignore lint/style/useImportType: <explanation>
 import { Injectable, OnModuleInit } from '@nestjs/common'
 import {
+    type Message,
     PrismaClient,
     type Thread,
     type User,
-    type Message,
 } from '@prisma/client'
 
 @Injectable()

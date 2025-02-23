@@ -1,5 +1,5 @@
-import { type CoreMessage, generateText } from 'ai'
 import { openai } from '@ai-sdk/openai'
+import { type CoreMessage, generateText } from 'ai'
 
 export async function generateAiResponse(messages: CoreMessage[]) {
     const { text } = await generateText({

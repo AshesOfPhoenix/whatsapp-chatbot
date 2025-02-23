@@ -1,9 +1,9 @@
-import { Test, type TestingModule } from '@nestjs/testing'
-import { WhatsappService } from './whatsapp.service'
 import { HttpModule } from '@nestjs/axios'
+import { Test, type TestingModule } from '@nestjs/testing'
 import { AiModule } from '../ai/ai.module'
 import { AiService } from '../ai/ai.service'
 import { DatabaseService } from '../database/database.service'
+import { WhatsappService } from './whatsapp.service'
 
 describe('WhatsappService', () => {
     let service: WhatsappService

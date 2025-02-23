@@ -1,10 +1,10 @@
+import { HttpModule } from '@nestjs/axios'
 import { Test, type TestingModule } from '@nestjs/testing'
+import { AiModule } from '../ai/ai.module'
+import { AiService } from '../ai/ai.service'
+import { DatabaseService } from '../database/database.service'
 import { WhatsappController } from './whatsapp.controller'
 import { WhatsappService } from './whatsapp.service'
-import { AiService } from '../ai/ai.service'
-import { HttpModule } from '@nestjs/axios'
-import { AiModule } from '../ai/ai.module'
-import { DatabaseService } from '../database/database.service'
 
 describe('WhatsappController', () => {
     let controller: WhatsappController

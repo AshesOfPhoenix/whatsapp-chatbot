@@ -2,6 +2,10 @@ FROM node:20-alpine
 
 WORKDIR /app
 
+RUN apt-get update && apt-get install -y \
+    openssl \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY package.json pnpm-lock.yaml ./
 
 RUN npm i -g pnpm

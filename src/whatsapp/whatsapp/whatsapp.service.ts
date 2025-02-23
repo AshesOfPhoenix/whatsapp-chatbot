@@ -54,34 +54,37 @@ export class WhatsappService {
     }
 
     async processMessage(request: WhatsAppWebhookRequest): Promise<void> {
+        this.logger.log('request', request)
         const messageSenderNumber =
             request.entry[0]?.changes[0]?.value.contacts[0]?.wa_id
         const message = request.entry[0]?.changes[0]?.value.messages[0]
         const messagePhoneNumberId =
             request.entry[0]?.changes[0]?.value.metadata.phone_number_id
 
-        this.logger.log(message)
+        this.logger.log('message', message)
 
-        const user = await this.databaseService.getOrCreateUser(
-            messagePhoneNumberId,
-            messageSenderNumber
-        )
-        const thread =
-            await this.databaseService.getOrCreateThread(messagePhoneNumberId)
+        // const user = await this.databaseService.getOrCreateUser(
+        //     messagePhoneNumberId,
+        //     messageSenderNumber
+        // )
+        // const thread =
+        //     await this.databaseService.getOrCreateThread(messagePhoneNumberId)
 
-        this.logger.log(thread)
+        // this.logger.log('thread', thread)
 
         switch (message.type) {
             case 'text': {
                 const msg = message as WhatsAppTextMessage
                 const text = msg.text.body
 
-                await this.databaseService.getOrCreateMessage(
-                    msg,
-                    msg.id,
-                    thread.id,
-                    'user'
-                )
+                this.logger.log('text', text)
+
+                // await this.databaseService.getOrCreateMessage(
+                //     msg,
+                //     msg.id,
+                //     thread.id,
+                //     'user'
+                // )
 
                 if (text.length < 1) {
                     this.logger.log('Empty message received')
@@ -93,29 +96,39 @@ export class WhatsappService {
                     break
                 }
 
-                const aiResponse = await this.aiService.getAIResponse(thread.id)
+                // const aiResponse = await this.aiService.getAIResponse(thread.id)
+                const sendToNotion = await lastValueFrom(
+                    this.httpService.post(
+                        `${process.env.SERVER_URL}/whatnote`,
+                        {
+                            message: request.entry[0],
+                        }
+                    )
+                )
+
+                console.log(sendToNotion)
                 // const aiResponse = text
 
                 const statusResponse = await this.sendWhatsappMessage(
-                    aiResponse,
+                    'Sending to Notion',
                     messageSenderNumber,
                     messagePhoneNumberId
                 )
 
-                for (const messageResponse of statusResponse.messages) {
-                    await this.databaseService.getOrCreateMessage(
-                        {
-                            from: messageSenderNumber,
-                            id: messageResponse.id,
-                            type: 'text',
-                            text: { body: aiResponse },
-                            timestamp: new Date().getTime().toString(),
-                        },
-                        messageResponse.id,
-                        thread.id,
-                        'assistant'
-                    )
-                }
+                // for (const messageResponse of statusResponse.messages) {
+                //     await this.databaseService.getOrCreateMessage(
+                //         {
+                //             from: messageSenderNumber,
+                //             id: messageResponse.id,
+                //             type: 'text',
+                //             text: { body: 'Sending to Notion' },
+                //             timestamp: new Date().getTime().toString(),
+                //         },
+                //         messageResponse.id,
+                //         thread.id,
+                //         'assistant'
+                //     )
+                // }
 
                 break
             }

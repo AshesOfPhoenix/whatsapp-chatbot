@@ -7,6 +7,7 @@ import { catchError, lastValueFrom, map } from 'rxjs'
 import { AiService } from '../ai/ai.service'
 // biome-ignore lint/style/useImportType: <explanation>
 import { DatabaseService } from '../database/database.service'
+import { deepgram } from 'src/utils/scripts/deepgram'
 
 @Injectable()
 export class WhatsappService {
@@ -179,7 +180,7 @@ export class WhatsappService {
                 )
 
                 // Download the audio file as a buffer
-                const audioBuffer = await lastValueFrom(
+                const audioStream = await lastValueFrom(
                     this.httpService.get(mediaUrl.url, {
                         headers: {
                             Authorization: `Bearer ${process.env.WHATSAPP_CLOUD_API_KEY}`,
@@ -189,20 +190,65 @@ export class WhatsappService {
                 )
 
                 // Send the buffer directly to Deepgram
-                const transcript = await lastValueFrom(
-                    this.httpService.post(
-                        'https://api.deepgram.com/v1/listen?model=nova-2&smart_format=true',
-                        audioBuffer.data,
-                        {
-                            headers: {
-                                'Content-Type': mediaUrl.mime_type,
-                                Authorization: `Token ${process.env.DEEPGRAM_API_KEY}`,
-                            },
-                        }
-                    )
-                )
+                // const response = await lastValueFrom(
+                //     this.httpService.post(
+                //         'https://api.deepgram.com/v1/listen?model=nova-2&smart_format=true',
+                //         audioBuffer.data,
+                //         {
+                //             headers: {
+                //                 'Content-Type': mediaUrl.mime_type,
+                //                 Authorization: `Token ${process.env.DEEPGRAM_API_KEY}`,
+                //             },
+                //         }
+                //     )
+                // )
+                //
+                // const deepgramResponse = response.data as DeepgramResponse
 
-                this.logger.log('Transcript', transcript)
+                try {
+                    const { result } =
+                        await deepgram.listen.prerecorded.transcribeFile(
+                            audioStream.data,
+                            {
+                                model: 'nova-2',
+                                smart_format: true,
+                                detect_language: true,
+                                topics: true,
+                                detect_entities: true,
+                                intents: true,
+                                summarize: true,
+                                sentiment: true,
+                            }
+                        )
+
+                    this.logger.log(
+                        'Deepgram transcription',
+                        JSON.stringify(result)
+                    )
+
+                    const transcript =
+                        result.results.channels[0].alternatives[0].transcript
+
+                    this.logger.log('Transcript', transcript)
+
+                    if (transcript.length < 1) {
+                        this.logger.log('No transcription available')
+                    } else {
+                        // Send transcription back to user
+                        await this.sendWhatsappMessage(
+                            `${transcript}`,
+                            messageSenderNumber,
+                            messagePhoneNumberId
+                        )
+                    }
+                } catch (error) {
+                    this.logger.error('Deepgram transcription error:', error)
+                    await this.sendWhatsappMessage(
+                        'Sorry, I had trouble transcribing your audio message.',
+                        messageSenderNumber,
+                        messagePhoneNumberId
+                    )
+                }
 
                 break
             }

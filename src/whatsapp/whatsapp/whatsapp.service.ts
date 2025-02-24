@@ -196,7 +196,7 @@ export class WhatsappService {
                         {
                             headers: {
                                 'Content-Type': mediaUrl.mime_type,
-                                Authorization: `Bearer ${process.env.DEEPGRAM_API_KEY}`,
+                                Authorization: `Token ${process.env.DEEPGRAM_API_KEY}`,
                             },
                         }
                     )

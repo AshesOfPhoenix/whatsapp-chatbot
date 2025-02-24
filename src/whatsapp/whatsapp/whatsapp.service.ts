@@ -225,6 +225,7 @@ export class WhatsappService {
                         'Deepgram transcription',
                         JSON.stringify(result)
                     )
+                    console.log(result)
 
                     const transcript =
                         result.results.channels[0].alternatives[0].transcript

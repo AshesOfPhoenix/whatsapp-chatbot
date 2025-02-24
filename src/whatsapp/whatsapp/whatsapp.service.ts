@@ -17,6 +17,11 @@ export class WhatsappService {
         private readonly databaseService: DatabaseService
     ) {}
 
+    /**
+     * Reads a message from WhatsApp and marks it as read.
+     * @param request - The request object containing the incoming message.
+     * @returns A promise that resolves when the message is read.
+     */
     async readMessage(request: WhatsAppWebhookRequest): Promise<void> {
         const messageNumberId =
             request.entry[0]?.changes[0]?.value.metadata.phone_number_id
@@ -31,6 +36,11 @@ export class WhatsappService {
         await this.sendToWhatsapp(config)
     }
 
+    /**
+     * Reacts to a message from WhatsApp.
+     * @param request - The request object containing the incoming message.
+     * @returns A promise that resolves when the reaction is sent.
+     */
     async reactToMessage(request: WhatsAppWebhookRequest): Promise<void> {
         const messageSenderNumber =
             request.entry[0]?.changes[0]?.value.contacts[0]?.wa_id
@@ -53,8 +63,13 @@ export class WhatsappService {
         await this.sendToWhatsapp(config)
     }
 
+    /**
+     * Processes a message from WhatsApp.
+     * @param request - The request object containing the incoming message.
+     * @returns A promise that resolves when the message is processed.
+     */
     async processMessage(request: WhatsAppWebhookRequest): Promise<void> {
-        this.logger.log('request', request)
+        // this.logger.log('request', request)
         const messageSenderNumber =
             request.entry[0]?.changes[0]?.value.contacts[0]?.wa_id
         const message = request.entry[0]?.changes[0]?.value.messages[0]
@@ -77,7 +92,7 @@ export class WhatsappService {
                 const msg = message as WhatsAppTextMessage
                 const text = msg.text.body
 
-                this.logger.log('text', text)
+                this.logger.log('Received message', text)
 
                 // await this.databaseService.getOrCreateMessage(
                 //     msg,
@@ -97,7 +112,8 @@ export class WhatsappService {
                 }
 
                 // const aiResponse = await this.aiService.getAIResponse(thread.id)
-                const sendToNotion = await lastValueFrom(
+                // TLDR: lastValueFrom is a function that returns a promise that resolves to the last value of an observable
+                const sendToProcess = await lastValueFrom(
                     this.httpService.post(
                         `${process.env.SERVER_URL}/whatnote`,
                         {
@@ -106,14 +122,19 @@ export class WhatsappService {
                     )
                 )
 
-                console.log(sendToNotion)
-                // const aiResponse = text
-
-                const statusResponse = await this.sendWhatsappMessage(
-                    'Sending to Notion',
-                    messageSenderNumber,
-                    messagePhoneNumberId
-                )
+                if (sendToProcess.status === 200) {
+                    const statusResponse = await this.sendWhatsappMessage(
+                        'Task created successfully.',
+                        messageSenderNumber,
+                        messagePhoneNumberId
+                    )
+                } else {
+                    await this.sendWhatsappMessage(
+                        `Failed to create task. Details: ${sendToProcess.data}`,
+                        messageSenderNumber,
+                        messagePhoneNumberId
+                    )
+                }
 
                 // for (const messageResponse of statusResponse.messages) {
                 //     await this.databaseService.getOrCreateMessage(
@@ -156,6 +177,24 @@ export class WhatsappService {
                 this.logger.log(
                     `Audio message received with caption: ${text} and media url: ${mediaUrl}`
                 )
+
+                const transcript = await lastValueFrom(
+                    this.httpService.post(
+                        'https://api.deepgram.com/v1/listen?model=nova-2&smart_format=true',
+                        {
+                            url: mediaUrl,
+                        },
+                        {
+                            headers: {
+                                'Content-Type': 'application/json',
+                                Authorization: `Bearer ${process.env.DEEPGRAM_API_KEY}`,
+                            },
+                        }
+                    )
+                )
+
+                this.logger.log('Transcript', transcript)
+
                 break
             }
             case 'video': {

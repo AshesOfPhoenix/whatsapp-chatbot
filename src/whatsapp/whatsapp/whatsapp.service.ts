@@ -178,15 +178,24 @@ export class WhatsappService {
                     `Audio message received with caption: ${text} and media url: ${JSON.stringify(mediaUrl)}`
                 )
 
+                // Download the audio file as a buffer
+                const audioBuffer = await lastValueFrom(
+                    this.httpService.get(mediaUrl.url, {
+                        headers: {
+                            Authorization: `Bearer ${process.env.WHATSAPP_CLOUD_API_KEY}`,
+                        },
+                        responseType: 'arraybuffer',
+                    })
+                )
+
+                // Send the buffer directly to Deepgram
                 const transcript = await lastValueFrom(
                     this.httpService.post(
                         'https://api.deepgram.com/v1/listen?model=nova-2&smart_format=true',
-                        {
-                            url: mediaUrl.url,
-                        },
+                        audioBuffer.data,
                         {
                             headers: {
-                                'Content-Type': 'application/json',
+                                'Content-Type': mediaUrl.mime_type,
                                 Authorization: `Bearer ${process.env.DEEPGRAM_API_KEY}`,
                             },
                         }

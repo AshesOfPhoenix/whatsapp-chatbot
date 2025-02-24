@@ -175,14 +175,14 @@ export class WhatsappService {
                     messagePhoneNumberId
                 )
                 this.logger.log(
-                    `Audio message received with caption: ${text} and media url: ${mediaUrl}`
+                    `Audio message received with caption: ${text} and media url: ${JSON.stringify(mediaUrl)}`
                 )
 
                 const transcript = await lastValueFrom(
                     this.httpService.post(
                         'https://api.deepgram.com/v1/listen?model=nova-2&smart_format=true',
                         {
-                            url: mediaUrl,
+                            url: mediaUrl.url,
                         },
                         {
                             headers: {

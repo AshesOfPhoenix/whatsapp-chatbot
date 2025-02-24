@@ -3,6 +3,9 @@ FROM node:20-alpine
 WORKDIR /app
 
 RUN apk update && apk add --no-cache \
+    gcc \
+    libpq-dev \
+    ca-certificates \
     openssl \
     && rm -rf /var/cache/apk/*
 

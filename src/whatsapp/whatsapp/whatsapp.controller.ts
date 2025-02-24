@@ -26,6 +26,7 @@ export class WhatsappController {
    */
   @Get('webhook')
   whatsappVerificationChallenge(@Req() request: Request): string {
+    this.logger.log('Received request', request.url)
     const mode = request.query['hub.mode'];
     const token = request.query['hub.verify_token'];
     const challenge = request.query['hub.challenge'];

@@ -57,3 +57,12 @@ report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 # AI
 spec.md
+
+# Misc
+misc
+
+# windsurf rules
+.windsurfrules
+
+# cursor rules
+.cursorrules

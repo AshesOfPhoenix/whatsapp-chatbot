@@ -8,15 +8,53 @@ import { AiService } from '../ai/ai.service'
 // biome-ignore lint/style/useImportType: <explanation>
 import { DatabaseService } from '../database/database.service'
 import { deepgram } from 'src/utils/scripts/deepgram'
+import { elevenlabs } from 'src/utils/scripts/elevenlabs'
 
 @Injectable()
 export class WhatsappService {
     private readonly logger = new Logger(WhatsappService.name)
+    // Add a cache to store recently processed message IDs
+    private readonly processedMessageIds = new Map<string, number>()
+    // Set expiration time for cached message IDs (10 minutes in milliseconds)
+    private readonly MESSAGE_CACHE_EXPIRY = 10 * 60 * 1000
+
     constructor(
         private readonly httpService: HttpService,
         private readonly aiService: AiService,
         private readonly databaseService: DatabaseService
-    ) {}
+    ) {
+        // Set up a periodic cleanup of the message cache
+        setInterval(() => this.cleanupMessageCache(), this.MESSAGE_CACHE_EXPIRY)
+    }
+
+    /**
+     * Cleans up expired message IDs from the cache
+     */
+    private cleanupMessageCache(): void {
+        const now = Date.now()
+        for (const [id, timestamp] of this.processedMessageIds.entries()) {
+            if (now - timestamp > this.MESSAGE_CACHE_EXPIRY) {
+                this.processedMessageIds.delete(id)
+            }
+        }
+    }
+
+    /**
+     * Checks if a message has already been processed
+     * @param messageId - The ID of the message to check
+     * @returns A boolean indicating whether the message has already been processed
+     */
+    private isMessageAlreadyProcessed(messageId: string): boolean {
+        return this.processedMessageIds.has(messageId)
+    }
+
+    /**
+     * Marks a message as processed
+     * @param messageId - The ID of the message to mark as processed
+     */
+    private markMessageAsProcessed(messageId: string): void {
+        this.processedMessageIds.set(messageId, Date.now())
+    }
 
     /**
      * Reads a message from WhatsApp and marks it as read.
@@ -78,6 +116,15 @@ export class WhatsappService {
             request.entry[0]?.changes[0]?.value.metadata.phone_number_id
 
         this.logger.log('message', message)
+
+        // Check if this message has already been processed
+        if (this.isMessageAlreadyProcessed(message.id)) {
+            this.logger.log(`Message ${message.id} already processed, skipping`)
+            return
+        }
+
+        // Mark this message as processed
+        this.markMessageAsProcessed(message.id)
 
         // const user = await this.databaseService.getOrCreateUser(
         //     messagePhoneNumberId,
@@ -171,6 +218,7 @@ export class WhatsappService {
                 const msg = message as WhatsAppAudioMessage
                 const text = msg.audio.caption
 
+                // Retrieve the audio file from WhatsApp
                 const mediaUrl = await this.retrieveMediaUrl(
                     msg.audio.id,
                     messagePhoneNumberId
@@ -189,24 +237,10 @@ export class WhatsappService {
                     })
                 )
 
-                // Send the buffer directly to Deepgram
-                // const response = await lastValueFrom(
-                //     this.httpService.post(
-                //         'https://api.deepgram.com/v1/listen?model=nova-2&smart_format=true',
-                //         audioBuffer.data,
-                //         {
-                //             headers: {
-                //                 'Content-Type': mediaUrl.mime_type,
-                //                 Authorization: `Token ${process.env.DEEPGRAM_API_KEY}`,
-                //             },
-                //         }
-                //     )
-                // )
-                //
-                // const deepgramResponse = response.data as DeepgramResponse
+                let transcript = ''
 
                 try {
-                    const { result } =
+                    /* const { result } =
                         await deepgram.listen.prerecorded.transcribeFile(
                             audioStream.data,
                             {
@@ -227,11 +261,37 @@ export class WhatsappService {
                     )
                     console.log(result)
 
-                    const transcript =
-                        result.results.channels[0].alternatives[0].transcript
+                    transcript =
+                        result.results.channels[0].alternatives[0].transcript */
 
-                    this.logger.log('Transcript', transcript)
+                    const audioBlob = new Blob([audioStream.data], {
+                        type: 'audio/ogg',
+                    })
+                    const transcription = await elevenlabs.speechToText.convert(
+                        {
+                            file: audioBlob,
+                            model_id: 'scribe_v1', // Model to use, for now only "scribe_v1" and "scribe_v1_base" are supported
+                            tag_audio_events: true, // Tag audio events like laughter, applause, etc.
+                            // language_code: 'eng', // Language of the audio file. If set to null, the model will detect the language automatically.
+                            diarize: true, // Whether to annotate who is speaking
+                            num_speakers: 1,
+                        }
+                    )
 
+                    this.logger.log('Transcription', transcription)
+
+                    transcript = transcription.text
+                } catch (error) {
+                    this.logger.error('Deepgram transcription error:', error)
+                    await this.sendWhatsappMessage(
+                        'Sorry, I had trouble transcribing your audio message.',
+                        messageSenderNumber,
+                        messagePhoneNumberId
+                    )
+                }
+
+                try {
+                    // If there is no transcription, send a message to the user
                     if (transcript.length < 1) {
                         this.logger.log('No transcription available')
                     } else {
@@ -243,14 +303,13 @@ export class WhatsappService {
                         )
                     }
                 } catch (error) {
-                    this.logger.error('Deepgram transcription error:', error)
+                    this.logger.error('Transcription error:', error)
                     await this.sendWhatsappMessage(
                         'Sorry, I had trouble transcribing your audio message.',
                         messageSenderNumber,
                         messagePhoneNumberId
                     )
                 }
-
                 break
             }
             case 'video': {
